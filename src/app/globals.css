@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  --background: #020617; /* Slate 950 */
+  --foreground: #f8fafc;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  /* অ্যাপের মতো ফিল দেওয়ার জন্য */
+  -webkit-tap-highlight-color: transparent; /* ক্লিকে নীল বক্স আসবে না */
+  user-select: none; /* টেক্সট কপি করা যাবে না অ্যাপের মতো */
+  overscroll-behavior-y: none; /* বাউন্স ইফেক্ট বন্ধ */
+}
+
+/* স্ক্রলবার লুকানোর জন্য */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
