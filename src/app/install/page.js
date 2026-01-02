@@ -101,7 +101,7 @@ export default function InstallPage() {
           {/* Condition 4: No Prompt available (Maybe plain desktop chrome without PWA trigger) */}
           {!deferredPrompt && !isIOS && (
              <div className="text-xs text-gray-400 mt-4 bg-gray-100 p-3 rounded-lg">
-                If the install button doesn't appear, please check your browser settings or use the browser menu (⋮) -> "Install App".
+                If the install button doesn't appear, please check your browser settings or use the browser menu (⋮) &rarr; "Install App".
              </div>
           )}
         </>
