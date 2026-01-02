@@ -9,20 +9,22 @@ export default function KitsDashboard() {
   const [stats, setStats] = useState({ totalDistributed: 0, totalStudents: 0, recentRecipients: [] });
   const [loading, setLoading] = useState(true);
 
-  // আইকন হেল্পার
+  // ডাইনামিক আইকন ফাংশন
   const getIcon = (name) => {
     const n = name.toLowerCase();
     if (n.includes('bag')) return '🎒';
     if (n.includes('pen')) return '🖊️';
-    if (n.includes('shirt')) return '👕';
-    if (n.includes('mug')) return '☕';
-    return '📦';
+    if (n.includes('shirt') || n.includes('tshirt')) return '👕';
+    if (n.includes('mug') || n.includes('cup')) return '☕';
+    if (n.includes('cap') || n.includes('hat')) return '🧢';
+    if (n.includes('badge') || n.includes('id')) return '🪪';
+    if (n.includes('food') || n.includes('box')) return '🍱';
+    return '📦'; 
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // দুটি API প্যারালাল কল করছি যাতে ফাস্ট হয়
         const [itemsRes, statsRes] = await Promise.all([
             fetch('/api/kits/items'),
             fetch('/api/kits/stats')
@@ -47,16 +49,16 @@ export default function KitsDashboard() {
     return Object.values(item.sizeStock || {}).reduce((a, b) => a + b, 0);
   };
 
-  // পার্সেন্টেজ হিসাব
-  const progress = stats.totalStudents > 0 
-    ? Math.round((stats.totalDistributed / stats.totalStudents) * 100) 
-    : 0;
+   // পার্সেন্টেজ হিসাব
+   const progress = stats.totalStudents > 0 
+   ? Math.round((stats.totalDistributed / stats.totalStudents) * 100) 
+   : 0;
 
   return (
     <MobileLayout title="Kit Manager">
       
-      {/* 1. Header & Stats Card (NEW DESIGN) */}
-      <div className="bg-gradient-to-br from-indigo-900 to-indigo-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200 mb-6 relative overflow-hidden">
+       {/* 1. Header & Stats Card (NEW DESIGN) */}
+       <div className="bg-gradient-to-br from-indigo-900 to-indigo-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200 mb-6 relative overflow-hidden">
         <div className="relative z-10 flex justify-between items-end">
           <div>
             <p className="text-indigo-200 text-sm font-medium mb-1">Total Distributed</p>
@@ -80,56 +82,10 @@ export default function KitsDashboard() {
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
       </div>
 
-      {/* 2. Quick Links (History Added) */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-         <Link href="/kits/distribute" className="bg-green-50 p-4 rounded-2xl border border-green-100 flex flex-col items-center justify-center text-center active:scale-95 transition-transform">
-            <span className="text-3xl mb-1">🎁</span>
-            <span className="font-bold text-green-800 text-sm">Distribute Now</span>
-         </Link>
 
-         <Link href="/kits/history" className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center active:scale-95 transition-transform">
-            <span className="text-3xl mb-1">📜</span>
-            <span className="font-bold text-blue-800 text-sm">View History</span>
-         </Link>
-      </div>
-
-      {/* 3. Recent Activity (NEW) */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-3 px-1">
-            <h3 className="text-gray-700 font-bold text-sm">Just Distributed</h3>
-            <Link href="/kits/history" className="text-xs text-blue-600 font-semibold">See All</Link>
-        </div>
-        
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {stats.recentRecipients.length > 0 ? (
-                stats.recentRecipients.map((student, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 border-b last:border-0 border-gray-50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-600">
-                                {student.name.charAt(0)}
-                            </div>
-                            <div>
-                                <p className="text-sm font-bold text-gray-800">{student.name}</p>
-                                <p className="text-xs text-gray-500">Roll: {student.roll}</p>
-                            </div>
-                        </div>
-                        <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg">
-                            Size: {student.tShirtSize}
-                        </span>
-                    </div>
-                ))
-            ) : (
-                <div className="p-4 text-center text-gray-400 text-sm">No activity yet.</div>
-            )}
-        </div>
-      </div>
-
-      {/* 4. Inventory Stock */}
-      <div className="mb-20">
-        <div className="flex justify-between items-center mb-3 px-1">
-             <h3 className="text-gray-700 font-bold text-sm">Inventory Status</h3>
-             <Link href="/kits/inventory" className="text-xs text-blue-600 font-semibold">Manage</Link>
-        </div>
+      {/* 2. Stock Overview */}
+      <div className="mb-8">
+        <h3 className="text-gray-700 font-bold text-sm mb-3 px-1">Current Stock</h3>
         
         {loading ? (
             <div className="text-center py-6 text-gray-400">Loading stock...</div>
@@ -140,7 +96,7 @@ export default function KitsDashboard() {
                 const isLow = stock < 20;
 
                 return (
-                <div key={item._id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center">
+                <div key={item._id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:border-indigo-100 transition-colors">
                     <div className="text-3xl mb-2">{getIcon(item.name)}</div>
                     <h4 className="font-bold text-gray-800 text-sm truncate w-full">{item.name}</h4>
                     <p className={`text-xl font-extrabold mt-1 ${isLow ? 'text-red-500' : 'text-blue-600'}`}>
@@ -149,10 +105,76 @@ export default function KitsDashboard() {
                 </div>
                 );
             })}
+            
+            {/* Add Item Button */}
+            <Link href="/kits/inventory" className="border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-4 text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all">
+                <span className="text-2xl">+</span>
+                <span className="text-xs font-bold mt-1">Add Item</span>
+            </Link>
             </div>
         )}
+      </div>
+
+      {/* 3. Quick Actions */}
+      <h3 className="text-gray-700 font-bold text-sm mb-4 px-1">Quick Actions</h3>
+      <div className="space-y-4 mb-20">
+        
+        {/* Update Inventory */}
+        <Link href="/kits/inventory" className="block group">
+          <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between active:scale-95 transition-transform group-hover:border-purple-300 group-hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
+              <div>
+                <h3 className="font-bold text-gray-800">Update Inventory</h3>
+                <p className="text-xs text-gray-500">Edit stock numbers manually</p>
+              </div>
+            </div>
+            {/* Arrow with Hover Effect */}
+            <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 transition-all duration-300 group-hover:bg-purple-600 group-hover:text-white">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </div>
+        </Link>
+
+        {/* Start Distribution */}
+        <Link href="/kits/distribute" className="block group">
+          <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between active:scale-95 transition-transform group-hover:border-green-300 group-hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
+              <div>
+                <h3 className="font-bold text-gray-800">Start Distribution</h3>
+                <p className="text-xs text-gray-500">Handout kits to members</p>
+              </div>
+            </div>
+            {/* Arrow with Hover Effect */}
+            <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 transition-all duration-300 group-hover:bg-green-600 group-hover:text-white">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </div>
+        </Link>
+
+        {/* Distribution History */}
+        <Link href="/kits/history" className="block group">
+          <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between active:scale-95 transition-transform group-hover:border-blue-300 group-hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📜</div>
+              <div>
+                <h3 className="font-bold text-gray-800">Distribution History</h3>
+                <p className="text-xs text-gray-500">See who received kits</p>
+              </div>
+            </div>
+            {/* Arrow with Hover Effect */}
+            <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </div>
+        </Link>
+
       </div>
 
     </MobileLayout>
   );
 }
+
+
+
