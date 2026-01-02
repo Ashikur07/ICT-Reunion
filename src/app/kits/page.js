@@ -111,7 +111,7 @@ export default function KitsDashboard() {
           </div>
         </Link>
 
-        <Link href="/kits/distribution" className="block group">
+        <Link href="/kits/distribute" className="block group">
           <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between active:scale-95 transition-transform group-hover:border-green-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-2xl">
