@@ -18,6 +18,8 @@ export default function InventoryPage() {
     if (n.includes('shirt') || n.includes('tshirt')) return '👕';
     if (n.includes('mug') || n.includes('cup')) return '☕';
     if (n.includes('cap') || n.includes('hat')) return '🧢';
+    if (n.includes('book') || n.includes('magazine') || n.includes('souvenir') || n.includes('documentary')) return '📔';
+    if (n.includes('crest') || n.includes('gift') || n.includes('award')) return '🏆';
     return '📦';
   };
 
