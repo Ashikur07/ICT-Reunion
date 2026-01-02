@@ -61,21 +61,32 @@ export async function PUT(request) {
   try {
     await dbConnect();
     const { id, type, amount, size } = await request.json(); 
-    // type = 'add' or 'remove'
-    // size = 'M', 'L' (optional for General items)
+    // type = 'add', 'remove', or 'set' (NEW)
 
     const item = await KitItem.findById(id);
     if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
-    const increment = type === 'add' ? amount : -amount;
-
-    if (item.category === 'General') {
-      item.stock = (item.stock || 0) + increment;
+    // ১. লজিক আপডেট: সরাসরি সংখ্যা বসানো (Set) অথবা যোগ-বিয়োগ
+    if (type === 'set') {
+        // সরাসরি ইনপুট ভ্যালু বসাবে
+        const newAmount = parseInt(amount);
+        if (item.category === 'General') {
+            item.stock = newAmount;
+        } else {
+            if (size && item.sizeStock[size] !== undefined) {
+                item.sizeStock[size] = newAmount;
+            }
+        }
     } else {
-      // Sized Item Logic
-      if (size && item.sizeStock[size] !== undefined) {
-        item.sizeStock[size] += increment;
-      }
+        // আগের মতো যোগ বা বিয়োগ
+        const increment = type === 'add' ? amount : -amount;
+        if (item.category === 'General') {
+            item.stock = (item.stock || 0) + increment;
+        } else {
+            if (size && item.sizeStock[size] !== undefined) {
+                item.sizeStock[size] += increment;
+            }
+        }
     }
 
     await item.save();
