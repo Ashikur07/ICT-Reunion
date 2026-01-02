@@ -1,6 +1,6 @@
-'use client';
+'use client'; // Next.js এ এটা থাকতেই হবে
 import { useState, useRef, useEffect } from 'react';
-import { Scanner } from '@yudiel/react-qr-scanner'; // নতুন লাইব্রেরি
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 export default function DistributePage() {
   const [inputTicket, setInputTicket] = useState('');
@@ -16,12 +16,11 @@ export default function DistributePage() {
   // অটো ফোকাস লজিক
   useEffect(() => {
     if (!showScanner && !isModalOpen) {
-      // একটু সময় নিয়ে ফোকাস করা, যাতে মোডাল বন্ধ হওয়ার পর ইনপুট অ্যাক্টিভ হয়
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [ticketData, isModalOpen, showScanner]);
 
-  // ১. টিকেট চেক করা API
+  // ১. টিকেট চেক করা API Call
   const checkTicket = async (ticketNumber) => {
     if (!ticketNumber) return;
 
@@ -29,7 +28,7 @@ export default function DistributePage() {
     setError('');
     setSuccessMsg('');
     setTicketData(null);
-    setShowScanner(false); // স্ক্যান কমপ্লিট, ক্যামেরা বন্ধ
+    setShowScanner(false); // স্ক্যান হয়ে গেলে ক্যামেরা বন্ধ
 
     try {
       const res = await fetch(`/api/distribute?ticketNumber=${ticketNumber}`);
@@ -57,18 +56,19 @@ export default function DistributePage() {
     checkTicket(inputTicket);
   };
 
-  // ২. স্ক্যান হ্যান্ডলার (নতুন লাইব্রেরি অনুযায়ী)
+  // ২. স্ক্যান হ্যান্ডলার
   const handleScan = (result) => {
     if (result) {
-      // এই লাইব্রেরি রেজাল্ট হিসেবে array দেয়, তাই প্রথমটা নিচ্ছি
       const rawValue = result[0]?.rawValue;
       if (rawValue) {
+        // সাউন্ড ইফেক্ট (অপশনাল)
+        // const audio = new Audio('/beep.mp3'); audio.play().catch(() => {});
         checkTicket(rawValue);
       }
     }
   };
 
-  // ৩. ডিস্ট্রিবিউশন কনফার্ম API
+  // ৩. ডিস্ট্রিবিউশন কনফার্ম
   const confirmDistribute = async () => {
     setLoading(true);
     try {
@@ -109,25 +109,29 @@ export default function DistributePage() {
         
         {/* QR Scanner Area */}
         {showScanner ? (
-          <div className="mb-4 bg-black rounded-lg overflow-hidden relative border-2 border-indigo-500">
-             {/* নতুন স্ক্যানার কম্পোনেন্ট */}
+          <div className="mb-4 bg-black rounded-lg overflow-hidden relative border-2 border-indigo-500 aspect-square">
              <Scanner 
                 onScan={handleScan}
                 allowMultiple={true}
-                scanDelay={2000} // ২ সেকেন্ড পর পর স্ক্যান করবে (ডুপ্লিকেট এড়াতে)
+                scanDelay={2000}
                 components={{ 
-                  audio: false, // শব্দ বন্ধ
-                  finder: true // লাল বর্ডার দেখাবে
+                  audio: false, 
+                  finder: false // কাস্টম ডিজাইনের জন্য ডিফল্ট ফাইন্ডার অফ রাখলাম
                 }}
                 styles={{
-                  container: { width: '100%', aspectRatio: '1/1' }
+                  container: { width: '100%', height: '100%' }
                 }}
              />
+             {/* স্ক্যানার ওভারলে ডিজাইন */}
+             <div className="absolute inset-0 border-[40px] border-black/50 flex items-center justify-center">
+                <div className="w-48 h-48 border-4 border-red-500/80 rounded-lg animate-pulse"></div>
+             </div>
+
             <button 
               onClick={() => setShowScanner(false)}
-              className="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md z-20"
+              className="absolute top-4 right-4 bg-white text-red-600 px-3 py-1 rounded-full text-xs font-bold shadow-md z-20"
             >
-              CLOSE ✕
+              CLOSE CAM
             </button>
           </div>
         ) : (
