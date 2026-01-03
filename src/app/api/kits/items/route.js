@@ -2,48 +2,30 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import KitItem from '@/models/KitItem';
 
-// ডাটাবেস কানেকশন হেল্পার (যদি তোমার আলাদা dbConnect ফাইল থাকে সেটা ইম্পোর্ট করো, না থাকলে এটা কাজ করবে)
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
+const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) return;
+  await mongoose.connect(MONGODB_URI);
+};
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-async function dbConnect() {
-  if (cached.conn) return cached.conn;
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => {
-      return mongoose;
-    });
-  }
-  cached.conn = await cached.promise;
-  return cached.conn;
-}
-
-// 1. GET: সব আইটেম দেখার জন্য
+// GET: সব আইটেম লিস্ট
 export async function GET() {
   try {
-    await dbConnect();
-    const items = await KitItem.find({}).sort({ createdAt: -1 });
+    await connectDB();
+    const items = await KitItem.find({}).sort({ createdAt: 1 }); 
     return NextResponse.json(items);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// 2. POST: নতুন আইটেম অ্যাড করার জন্য
+// POST: নতুন আইটেম অ্যাড
 export async function POST(request) {
   try {
-    await dbConnect();
+    await connectDB();
     const body = await request.json();
 
-    // ডুপ্লিকেট নাম চেক করা
     const existing = await KitItem.findOne({ name: body.name });
     if (existing) {
       return NextResponse.json({ error: 'Item already exists!' }, { status: 400 });
@@ -56,35 +38,40 @@ export async function POST(request) {
   }
 }
 
-// 3. PUT: স্টক আপডেট করার জন্য
+// PUT: স্টক আপডেট
 export async function PUT(request) {
   try {
-    await dbConnect();
+    await connectDB();
     const { id, type, amount, size } = await request.json(); 
-    // type = 'add', 'remove', or 'set' (NEW)
+    // type = 'set' (সরাসরি ইনপুট) OR 'add'/'remove' (বাটন ক্লিক)
 
     const item = await KitItem.findById(id);
     if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
-    // ১. লজিক আপডেট: সরাসরি সংখ্যা বসানো (Set) অথবা যোগ-বিয়োগ
+    const val = parseInt(amount);
+
     if (type === 'set') {
-        // সরাসরি ইনপুট ভ্যালু বসাবে
-        const newAmount = parseInt(amount);
+        // সরাসরি ভ্যালু সেট করা
         if (item.category === 'General') {
-            item.stock = newAmount;
+            item.stock = val;
         } else {
-            if (size && item.sizeStock[size] !== undefined) {
-                item.sizeStock[size] = newAmount;
+            if (size) {
+                if (!item.sizeStock) item.sizeStock = {};
+                item.sizeStock[size] = val;
+                item.markModified('sizeStock'); // Mongoose কে জানানো যে অবজেক্ট চেঞ্জ হয়েছে
             }
         }
     } else {
-        // আগের মতো যোগ বা বিয়োগ
-        const increment = type === 'add' ? amount : -amount;
+        // যোগ বা বিয়োগ
+        const increment = type === 'add' ? val : -val;
         if (item.category === 'General') {
             item.stock = (item.stock || 0) + increment;
         } else {
-            if (size && item.sizeStock[size] !== undefined) {
-                item.sizeStock[size] += increment;
+            if (size) {
+                if (!item.sizeStock) item.sizeStock = {};
+                const current = item.sizeStock[size] || 0;
+                item.sizeStock[size] = current + increment;
+                item.markModified('sizeStock');
             }
         }
     }
@@ -92,6 +79,7 @@ export async function PUT(request) {
     await item.save();
     return NextResponse.json(item);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

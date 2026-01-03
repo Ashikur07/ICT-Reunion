@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
+import mongoose from 'mongoose';
 import Ticket from '@/models/Ticket';
 
+const MONGODB_URI = process.env.MONGODB_URI;
+const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) return;
+  await mongoose.connect(MONGODB_URI);
+};
+
 export async function GET() {
-  await dbConnect();
+  await connectDB();
   
   try {
-    // ১. মোট কতজন কিট নিয়েছে
     const totalDistributed = await Ticket.countDocuments({ isUsed: true });
-    
-    // ২. মোট স্টুডেন্ট সংখ্যা (অপশনাল, পার্সেন্টেজ দেখানোর জন্য)
     const totalStudents = await Ticket.countDocuments({});
 
-    // ৩. সর্বশেষ ৫ জন যারা পেয়েছে (Preview এর জন্য)
+    // লেটেস্ট ৩ জন রিসিভার (প্রিভিউ এর জন্য)
     const recentRecipients = await Ticket.find({ isUsed: true })
-      .sort({ updatedAt: -1 }) // একদম লেটেস্ট আগে আসবে
+      .sort({ updatedAt: -1 })
       .limit(3)
-      .select('name roll tShirtSize updatedAt');
+      .select('name roll tShirtSize updatedAt')
+      .lean();
 
     return NextResponse.json({ 
       totalDistributed, 

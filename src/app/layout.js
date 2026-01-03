@@ -2,8 +2,8 @@ import './globals.css';
 
 // ১. মেটাডাটা (Metadata) - শুধু টাইটেল, ডেসক্রিপশন, আইকন এখানে থাকবে
 export const metadata = {
-  title: "ICT Reunion | Fund Tracker",
-  description: "Track deposits, expenses and sponsors for the reunion.",
+  title: "ICT Reunion | Kit Manager",
+  description: "Efficiently manage and track the distribution of reunion kits, gifts, and food items for ICT Dept students.",
   manifest: "/manifest.json",
 };
 
@@ -25,3 +25,7 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
+
+
+

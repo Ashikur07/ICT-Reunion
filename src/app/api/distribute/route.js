@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import KitItem from '@/models/KitItem';
-import Ticket from '@/models/Ticket'; // তোমার 'tickets' কালেকশন ওয়ালা মডেল
+import Ticket from '@/models/Ticket'; 
 
-// ডাটাবেস কানেকশন (তোমার হেল্পার থাকলে সেটা ইমপোর্ট করো)
 const MONGODB_URI = process.env.MONGODB_URI;
 
 const connectDB = async () => {
@@ -11,65 +10,84 @@ const connectDB = async () => {
   await mongoose.connect(MONGODB_URI);
 };
 
-// 1. টিকেট ইনফো চেক করার জন্য (Lookup)
+// 1. টিকেট চেক করা (GET) - আগের মতোই থাকছে
 export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
-    const ticketNumber = searchParams.get('ticketNumber');
+    const ticketInput = searchParams.get('ticketNumber'); 
 
-    if (!ticketNumber) {
-      return NextResponse.json({ error: 'Ticket number required' }, { status: 400 });
-    }
+    if (!ticketInput) return NextResponse.json({ error: 'Ticket number required' }, { status: 400 });
 
-    const ticket = await Ticket.findOne({ ticketNumber });
+    const ticket = await Ticket.findOne({ roll: ticketInput }).lean();
 
-    if (!ticket) {
-      return NextResponse.json({ error: 'টিকেট পাওয়া যায়নি!' }, { status: 404 });
-    }
+    if (!ticket) return NextResponse.json({ error: 'Ticket not found!' }, { status: 404 });
 
-    return NextResponse.json(ticket);
+    const responseData = {
+        ...ticket,
+        isUsed: ticket.isUsed === true 
+    };
+
+    return NextResponse.json(responseData);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// 2. ডিস্ট্রিবিউশন কনফার্ম করার জন্য (Inventory Update)
+// 2. ডিস্ট্রিবিউশন কনফার্ম (POST) - ⭐ এখানে লজিক চেঞ্জ হয়েছে
 export async function POST(request) {
   try {
     await connectDB();
-    const { ticketNumber } = await request.json();
+    const { ticketNumber } = await request.json(); 
 
-    // ১. টিকেট আবার চেক করা
-    const ticket = await Ticket.findOne({ ticketNumber });
-    if (!ticket) return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-    if (ticket.isUsed) return NextResponse.json({ error: 'এই টিকেট ইতিমধ্যে ব্যবহার করা হয়েছে!' }, { status: 400 });
-
-    // ২. ইনভেন্টরি আপডেট লজিক
+    const ticket = await Ticket.findOne({ roll: ticketNumber });
     
-    // A. Tshirt (Sized) কমানো
-    const tshirtSize = ticket.tShirtSize; // টিকেটে যে সাইজ আছে (যেমন: 'L')
+    if (!ticket) return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+    
+    if (ticket.isUsed) {
+      return NextResponse.json({ error: 'This ticket has already been used!' }, { status: 400 });
+    }
+
+    // --- ইনভেন্টরি আপডেট লজিক ---
+    const tshirtSize = ticket.tShirtSize; 
     const sizeField = `sizeStock.${tshirtSize}`;
 
-    // Sized আইটেম (Tshirt) আপডেট
-    const tshirtUpdate = await KitItem.updateOne(
-      { category: 'Sized', [sizeField]: { $gt: 0 } }, // স্টক ০ এর বেশি থাকলেই কমবে
+    // ১. আগে চেক করি Sized আইটেম (Polo/Jersey) স্টক আছে কিনা
+    const lowStockItems = await KitItem.find({ 
+        category: 'Sized', 
+        [sizeField]: { $lte: 0 } 
+    });
+
+    if (lowStockItems.length > 0) {
+        const names = lowStockItems.map(i => i.name).join(', ');
+        return NextResponse.json({ error: `Stock out for size ${tshirtSize} in: ${names}!` }, { status: 400 });
+    }
+
+    // ২. সব Sized আইটেম আপডেট (১ করে কমানো)
+    await KitItem.updateMany(
+      { category: 'Sized' }, 
       { $inc: { [sizeField]: -1 } }
     );
 
-    if (tshirtUpdate.modifiedCount === 0) {
-      return NextResponse.json({ error: `স্টকে ${tshirtSize} সাইজের টি-শার্ট নেই!` }, { status: 400 });
+    // ⭐ ৩. General আইটেম আপডেট (Bag লজিক সহ)
+    let generalQuery = { category: 'General', stock: { $gt: 0 } };
+
+    // লজিক: যদি Current Student হয়, তবে সে Bag পাবে না
+    if (ticket.participantType === 'Current Student') {
+        // নামের মধ্যে 'Bag' থাকলে সেটা বাদ দিয়ে বাকিগুলো আপডেট করবে
+        generalQuery.name = { $not: { $regex: 'Bag', $options: 'i' } };
     }
 
-    // B. সব General আইটেম (Bag, Pen, etc.) ১ করে কমানো
     await KitItem.updateMany(
-      { category: 'General', stock: { $gt: 0 } },
+      generalQuery,
       { $inc: { stock: -1 } }
     );
 
-    // ৩. টিকেট isUsed = true করা
-    ticket.isUsed = true;
-    await ticket.save();
+    // --- টিকেট স্ট্যাটাস আপডেট ---
+    await Ticket.updateOne(
+        { roll: ticketNumber },
+        { $set: { isUsed: true } }
+    );
 
     return NextResponse.json({ success: true, message: 'Kit distributed successfully!' });
 
